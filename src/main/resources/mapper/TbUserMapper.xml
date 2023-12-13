@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alex.play.shop.mapper.TbUserMapper">
+<!--    <resultMap id="BaseResultMap" type="com.alex.single.sign.on.entity.po.TbUser">-->
+<!--        &lt;!&ndash;@mbg.generated&ndash;&gt;-->
+<!--        &lt;!&ndash;@Table base_project_contrast&ndash;&gt;-->
+<!--        <id column="user_id" property="userId" />-->
+<!--        <result column="user_account" property="userAccount" />-->
+<!--        <result column="user_pwd" property="userPwd" />-->
+<!--        <result column="user_name" property="userName" />-->
+<!--        <result column="user_phone" property="userPhone" />-->
+<!--        <result column="user_headpic" property="userHeadpic" />-->
+<!--    </resultMap>-->
+
+    <sql id="Base_Column_List">
+        <!--@mbg.generated-->
+        id, user_account
+    </sql>
+
+    <select id="findByTbUserQueryDto" resultType="com.alex.play.shop.entity.po.TbUser">
+        select * from tb_user
+        <where>
+            <if test="userAccount != null and userAccount != ''">
+                user_account like "%"#{userAccount}"%"
+            </if>
+            <if test="userEmail != null and userEmail != ''">
+                and user_email like "%"#{userEmail}"%"
+            </if>
+            <if test="userPhone != null and userPhone != ''">
+                and user_phone like "%"#{userPhone}"%"
+            </if>
+            <if test="userType != null and userType != ''">
+                and user_type = #{userType}
+            </if>
+        </where>
+    </select>
+</mapper>
