@@ -59,8 +59,8 @@ public class BaseResponse<T> {
 
     public static BaseResponse<String> failure(String errorCode, String errorMessage) {
         BaseResponse<String> baseResponse = BaseResponse.<String>builder().build();
-        baseResponse.setCode(CodeConstants.CODE_SERVICE_ERROR_EXEC);
-        baseResponse.setMessage(MessageConstants.MESSAGE_SERVICE_ERROR_EXEC);
+        baseResponse.setCode(Integer.parseInt(errorCode));
+        baseResponse.setMessage(errorMessage);
         baseResponse.setExtMessage(errorCode + ":" + errorMessage);
         baseResponse.setData(null);
 

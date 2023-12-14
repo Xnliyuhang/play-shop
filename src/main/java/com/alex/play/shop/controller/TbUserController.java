@@ -1,5 +1,6 @@
 package com.alex.play.shop.controller;
 
+import com.alex.play.shop.entity.dto.RefreshTokenDTO;
 import com.alex.play.shop.entity.dto.TbUserBaseUpdateDto;
 import com.alex.play.shop.entity.dto.TbUserQueryDto;
 import com.alex.play.shop.entity.dto.TbUserRegisterDto;
@@ -26,7 +27,6 @@ public class TbUserController {
     @PostMapping("/noAuth/add")
     public BaseResponse add(@Valid @RequestBody TbUserRegisterDto tbUserRegisterDto){
         try {
-            System.out.println("111");
             return tbUserService.add(tbUserRegisterDto);
 
         } catch (Exception e) {
@@ -45,8 +45,13 @@ public class TbUserController {
         return tbUserService.select(tbUserQueryDto);
     }
 
-    @PostMapping("/page")
-    public BaseResponse page(){
-        return BaseResponse.success("查询成功");
+    @PostMapping("/noAuth/refresh")
+    public BaseResponse refresh(@Valid @RequestBody RefreshTokenDTO refreshTokenDTO){
+        try {
+            return tbUserService.refresh(refreshTokenDTO);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
+
 }

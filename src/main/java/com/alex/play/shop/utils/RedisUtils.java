@@ -1,8 +1,11 @@
 package com.alex.play.shop.utils;
 
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
@@ -19,6 +22,7 @@ import java.util.concurrent.TimeUnit;
  * @Date 2023/12/4 22:52
  * @Version 1.0
  */
+@Slf4j
 @Component
 public class RedisUtils {
     /**
@@ -514,6 +518,41 @@ public class RedisUtils {
             return 0;
         }
     }
+    /**
+     * 获取 RedisSerializer
+     *
+     * @return the redis serializer
+     */
+    protected RedisSerializer<String> getRedisSerializer() {
+        return redisTemplate.getStringSerializer();
+    }
+    public Boolean setNX(final String key, final String value, final long time){
+        Boolean execute = redisTemplate.execute((RedisCallback<Boolean>) connection -> {
+            RedisSerializer<String> serializer = getRedisSerializer();
+            byte[] keys = serializer.serialize(key);
+            byte[] values = serializer.serialize(value);
+            Boolean result = connection.setNX(keys, values);
+            connection.expire(keys, time);
+            log.debug("[redisTemplate redis]放入原子锁缓存  url:{} ========缓存时间为{}秒", key, time);
+            return result;
+        });
+        return execute;
+    }
+
+    /**
+     * 修改过期时间
+     * @param key
+     * @param time
+     */
+    public void upExpirationTime(final String key, final long time) {
+        RedisSerializer<String> serializer = getRedisSerializer();
+        redisTemplate.execute((RedisCallback<Long>) connection -> {
+            byte[] keys = serializer.serialize(key);
+            connection.expire(keys, time);
+            log.debug("[redisTemplate redis]修改 缓存过期时间  url:{} ========缓存时间为{}秒", key, time);
+            return 1L;
+        });
+    }
 
     // ===============================list=================================
 
@@ -621,6 +660,7 @@ public class RedisUtils {
     }
 
 
+
     /**
      * 将list放入缓存
      *
@@ -679,6 +719,5 @@ public class RedisUtils {
             e.printStackTrace();
             return 0;
         }
-
     }
 }

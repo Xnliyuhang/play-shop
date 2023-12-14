@@ -2,20 +2,25 @@ package com.alex.play.shop.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.text.StrBuilder;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.hutool.jwt.JWTPayload;
+import cn.hutool.jwt.JWTUtil;
+import com.alex.play.shop.constans.CodeConstants;
+import com.alex.play.shop.constans.MessageConstants;
 import com.alex.play.shop.constans.RedisConstants;
-import com.alex.play.shop.entity.dto.LoginDto;
-import com.alex.play.shop.entity.dto.TbUserBaseUpdateDto;
-import com.alex.play.shop.entity.dto.TbUserQueryDto;
-import com.alex.play.shop.entity.dto.TbUserRegisterDto;
+import com.alex.play.shop.constans.TokenContants;
+import com.alex.play.shop.entity.dto.*;
 import com.alex.play.shop.entity.po.TbUser;
 import com.alex.play.shop.entity.po.TbWallet;
+import com.alex.play.shop.entity.vo.TokenVO;
 import com.alex.play.shop.jwt.JwtTokenProvider;
 import com.alex.play.shop.mapper.TbUserMapper;
 import com.alex.play.shop.mapper.TbWalletMapper;
 import com.alex.play.shop.service.TbUserService;
 import com.alex.play.shop.utils.BaseResponse;
+import com.alex.play.shop.utils.ProduceToken;
 import com.alex.play.shop.utils.RedisUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.github.pagehelper.PageHelper;
@@ -27,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @ClassName TbUserServiceImpl
@@ -48,6 +54,9 @@ public class TbUserServiceImpl implements TbUserService {
 
     @Resource
     JwtTokenProvider jwtTokenProvider;
+
+    @Resource
+    ProduceToken produceToken;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -110,6 +119,45 @@ public class TbUserServiceImpl implements TbUserService {
     }
 
     @Override
+    public BaseResponse refresh(RefreshTokenDTO refreshTokenDTO) throws Exception {
+        Long userId = null;
+        if (JWTUtil.verify(refreshTokenDTO.getRefreshToken(), "jwtSecretKey".getBytes())){
+            JWTPayload jwtPayload = jwtTokenProvider.parseToken(refreshTokenDTO.getRefreshToken());
+            userId = Long.valueOf(jwtPayload.getClaim("user_id").toString());
+        }
+
+        if (ObjectUtil.isEmpty(userId)){
+            return BaseResponse.builder()
+                    .code(CodeConstants.CODE_CLIENT_ERROR_PERMISSION_NO)
+                    .message(MessageConstants.MESSAGE_CLIENT_ERROR_PERMISSION_NO)
+                    .build();
+        }
+
+        String refreshToken = (String) redisUtils.get(RedisConstants.REDIS_WEB_ADMIN_REFRESH_TOKEN_PREFIX + userId);
+        if (!refreshToken.equals(refreshTokenDTO.getRefreshToken())) {
+            return BaseResponse.builder()
+                    .code(CodeConstants.CODE_CLIENT_ERROR_PERMISSION_NO)
+                    .message(MessageConstants.MESSAGE_CLIENT_ERROR_PERMISSION_NO)
+                    .build();
+        }
+
+        TbUser tbUser = tbUserMapper.selectById(userId);
+        if (tbUser == null) {
+            return BaseResponse.builder()
+                    .code(CodeConstants.CODE_CLIENT_ERROR_PERMISSION_NO)
+                    .message(MessageConstants.MESSAGE_CLIENT_ERROR_PERMISSION_NO)
+                    .build();
+        }
+
+        TokenVO tokenVO = produceToken.getToken(userId, tbUser.getUserAccount(), "refresh");
+        if (Objects.nonNull(tokenVO)) {
+            return BaseResponse.success(tokenVO);
+        } else {
+            throw new Exception("token生成失败");
+        }
+    }
+
+    @Override
     public BaseResponse login(LoginDto loginDto) {
 
         TbUser tbUser = tbUserMapper.selectOne(new QueryWrapper<TbUser>().lambda().eq(TbUser::getUserEmail, loginDto.getUserEmail()).eq(TbUser::getUserPassword, SecureUtil.md5(loginDto.getUserPassword())));
@@ -118,19 +166,9 @@ public class TbUserServiceImpl implements TbUserService {
         }
 
         Map<String,Object> map = new HashMap<>();
-
-        String tokenKey = String.valueOf(StrBuilder.create().append(RedisConstants.REDIS_WEB_ADMIN_TOKEN_PREFIX).append(tbUser.getId()));
-        long tokenValues = redisUtils.lGetListSize(tokenKey);
-        if (tokenValues >= 3){
-            Object o = redisUtils.lGetIndex(tokenKey, 0);
-            redisUtils.lRemove(tokenKey,1,redisUtils.lGetIndex(tokenKey, 0));
-        }
-        String token = jwtTokenProvider.createToken(String.valueOf(tbUser.getId()), tbUser.getUserAccount());
-        redisUtils.lSet(tokenKey,token,1000*60*60*24);
-        System.out.println("length: " + redisUtils.lGetListSize(tokenKey));
-        System.out.println("token: " + token);
+        TokenVO tokenVO = produceToken.getToken(tbUser.getId(), tbUser.getUserAccount(), "login");
         map.put("user",tbUser);
-        map.put("access_token",token);
+        map.put("token_vo",tokenVO);
         return BaseResponse.success(map,"登陆成功");
     }
 

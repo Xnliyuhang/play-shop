@@ -1,9 +1,6 @@
 package com.alex.play.shop.service;
 
-import com.alex.play.shop.entity.dto.LoginDto;
-import com.alex.play.shop.entity.dto.TbUserBaseUpdateDto;
-import com.alex.play.shop.entity.dto.TbUserQueryDto;
-import com.alex.play.shop.entity.dto.TbUserRegisterDto;
+import com.alex.play.shop.entity.dto.*;
 import com.alex.play.shop.utils.BaseResponse;
 import org.springframework.web.bind.annotation.PostMapping;
 
@@ -21,6 +18,8 @@ public interface TbUserService {
     BaseResponse update(TbUserBaseUpdateDto tbUserBaseUpdateDto);
 
     BaseResponse select(TbUserQueryDto tbUserQueryDto);
+
+    BaseResponse refresh(RefreshTokenDTO refreshTokenDTO) throws Exception;
 
     BaseResponse login(LoginDto loginDto);
 

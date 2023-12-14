@@ -33,6 +33,7 @@
             <if test="userType != null and userType != ''">
                 and user_type = #{userType}
             </if>
+            and is_del = 0
         </where>
     </select>
 </mapper>
